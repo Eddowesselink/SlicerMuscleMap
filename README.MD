@@ -15,8 +15,7 @@ If you have a GPU available and installed then whole-body segmentation can be co
 
 **To use a GPU,** you need a compatible NVIDIA GPU with [CUDA](https://developer.nvidia.com/cuda-toolkit) installed or a compatible AMD GPU with [ROCM](https://www.amd.com/en/products/software/rocm.html) installed. You then need to install the corresponding GPU-compatible version of [PyTorch v2.4.0](https://pytorch.org/get-started/previous-versions/). 
 
-
-### Usage-
+### Usage
 - Start 3D slicer
 - Go to MuscleMap module
 - Install important MuscleMap depencies by clicking on the button in the main module.
