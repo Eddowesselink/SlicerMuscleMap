@@ -27,5 +27,8 @@ If you have a GPU available and installed then whole-body segmentation can be co
 
 Please post any questions to the [MuscleMap issue page](https://github.com/MuscleMap/MuscleMap/issues).
 
+## Contributing
+
+Contributions to this extensions are welcome. Please send a pull request with any suggested changes. 
 
 [MuscleMap_Slicer3D.png]: MuscleMap_Slicer3D.png
