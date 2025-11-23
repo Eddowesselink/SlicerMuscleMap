@@ -1,5 +1,6 @@
 # SlicerMuscleMap: An Open-Source, Community-Supported Consortium for Whole-Body Quantitative MRI of Muscle
 SlicerMuscleMap is an open-source segmentation model for the automated analysis of whole-body muscle morphometry and composition.
+
 ![][MuscleMap_Slicer3D.png]
 
 When citing MuscleMap, please cite the following publication:
@@ -26,6 +27,6 @@ If you have a GPU available and installed then whole-body segmentation can be co
 
 Please post any questions to the [MuscleMap issue page](https://github.com/MuscleMap/MuscleMap/issues).
 
+### Contributing
 
-
-[MuscleMap_Slicer3D.png]: MuscleMap_Slicer3D.png
+Contributions to this extensions are welcome. Please send a pull request with any suggested changes.
