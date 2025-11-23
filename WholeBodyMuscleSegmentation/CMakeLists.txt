@@ -24,7 +24,7 @@ set(EXTENSION_CONTRIBUTORS
 
 # Homepage van de extensie (jouw GitHub repo)
 set(EXTENSION_HOMEPAGE
-  "https://github.com/Eddowesselink/Slicer3D_MuscleMap"
+  "https://github.com/Eddowesselink/SlicerMuscleMap"
   )
 
 # Icoon in de Extensions Manager (PNG moet openbaar bereikbaar zijn)
