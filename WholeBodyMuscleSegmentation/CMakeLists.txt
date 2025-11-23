@@ -34,16 +34,8 @@ set(EXTENSION_DEPENDS
   "Pytorch"
   )
 
-#-----------------------------------------------------------------------------
-# Slicer setup
-#-----------------------------------------------------------------------------
-
 find_package(Slicer REQUIRED)
 include(${Slicer_USE_FILE})
-
-#-----------------------------------------------------------------------------
-# Scripted module build
-#-----------------------------------------------------------------------------
 
 set(MODULE_NAME WholeBodyMuscleSegmentation)
 
@@ -62,10 +54,6 @@ slicerMacroBuildScriptedModule(
   RESOURCES ${MODULE_PYTHON_RESOURCES}
   WITH_GENERIC_TESTS
   )
-
-#-----------------------------------------------------------------------------
-# Tests
-#-----------------------------------------------------------------------------
 
 if(BUILD_TESTING)
 
