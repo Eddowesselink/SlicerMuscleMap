@@ -1,8 +1,6 @@
 # MuscleMap Slicer3D: An Open-Source, Community-Supported Consortium for Whole-Body Quantitative MRI of Muscle
 
-<p align="center">
-   <img width="100%" src="https://github.com/Eddowesselink/Slicer3D_MuscleMap/MuscleMap_Slicer3D.png">
-</p>
+![][MuscleMap_Slicer3D.png]
 
 ## MuscleMap Slicer-3D package
 
@@ -32,3 +30,6 @@ If you have a GPU available and installed then whole-body segmentation can be co
 
 Please post any questions to the [MuscleMap issue page](https://github.com/MuscleMap/MuscleMap/issues).
 
+
+
+[MuscleMap_Slicer3D.png]: MuscleMap_Slicer3D.png
