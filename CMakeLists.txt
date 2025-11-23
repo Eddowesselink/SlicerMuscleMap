@@ -4,12 +4,12 @@ project(MuscleMap)
 
 #-----------------------------------------------------------------------------
 # Extension meta-information
-set(EXTENSION_HOMEPAGE "https://www.slicer.org/wiki/Documentation/Nightly/Extensions/MuscleMap")
+set(EXTENSION_HOMEPAGE "https://github.com/Eddowesselink/SlicerMuscleMap")
 set(EXTENSION_CONTRIBUTORS "Eddo Wesselink (Stanford University), Kenneth Arnold Weber II (Stanford University)")
-set(EXTENSION_DESCRIPTION "A 3D Slicer interface to the MuscleMap whole-body segmentation model.")
+set(EXTENSION_DESCRIPTION "A 3D Slicer extension to the MuscleMap whole-body segmentation model.")
 set(EXTENSION_ICONURL "https://github.com/Eddowesselink/SlicerMuscleMap/blob/main/MuscleMap.png")
 set(EXTENSION_SCREENSHOTURLS "https://github.com/Eddowesselink/SlicerMuscleMap/blob/main/MuscleMap_Slicer3D.png")
-set(EXTENSION_DEPENDS "NA") # Specified as a list or "NA" if no dependencies
+set(EXTENSION_DEPENDS "PyTorch") # Specified as a list or "NA" if no dependencies
 
 #-----------------------------------------------------------------------------
 # Extension dependencies
