@@ -7,8 +7,9 @@ project(MuscleMap)
 set(EXTENSION_HOMEPAGE "https://github.com/Eddowesselink/SlicerMuscleMap")
 set(EXTENSION_CONTRIBUTORS "Eddo Wesselink (Stanford University), Kenneth Arnold Weber II (Stanford University)")
 set(EXTENSION_DESCRIPTION "A 3D Slicer extension to the MuscleMap whole-body segmentation model.")
-set(EXTENSION_ICONURL "https://github.com/Eddowesselink/SlicerMuscleMap/blob/main/MuscleMap.png")
-set(EXTENSION_SCREENSHOTURLS "https://github.com/Eddowesselink/SlicerMuscleMap/blob/main/MuscleMap_Slicer3D.png")
+set(EXTENSION_ICONURL "https://raw.githubusercontent.com/Eddowesselink/SlicerMuscleMap/main/MuscleMap.png")
+set(EXTENSION_SCREENSHOTURLS
+    "https://raw.githubusercontent.com/Eddowesselink/SlicerMuscleMap/main/MuscleMap_Slicer3D.png")
 set(EXTENSION_DEPENDS "PyTorch") # Specified as a list or "NA" if no dependencies
 
 #-----------------------------------------------------------------------------
