@@ -65,7 +65,6 @@ class WholeBodyMuscleSegmentation(ScriptedLoadableModule):
             "We gratefully acknowledge the developers and contributors of these projects."
         )
 
-        # 👇 voeg dit toe
         iconPath = os.path.join(
             os.path.dirname(__file__),
             "Resources", "Icons", "MuscleMap.png"
@@ -79,6 +78,7 @@ class WholeBodyMuscleSegmentation(ScriptedLoadableModule):
         )
         return qt.QIcon(iconPath)
 
+
 #
 # GUI
 #
@@ -90,24 +90,56 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         ScriptedLoadableModuleWidget.setup(self)
 
         self.logic = WholeBodyMuscleSegmentationLogic()
-        
+
+        # Logo
         logoLabel = qt.QLabel()
         logoPath = os.path.join(os.path.dirname(__file__), "MuscleMap.png")
-
         pixmap = qt.QPixmap(logoPath)
-
-        # 👉 Schaal hier het logo (pas de breedte/hoogte naar wens aan!)
         scaled = pixmap.scaledToWidth(300, qt.Qt.SmoothTransformation)
-
         logoLabel.setPixmap(scaled)
         logoLabel.setAlignment(qt.Qt.AlignCenter)
-
         self.layout.addWidget(logoLabel)
 
+        # -------- Installing packages section --------
+        packagesCollapsibleButton = ctk.ctkCollapsibleButton()
+        packagesCollapsibleButton.text = "Installing packages"
+        self.layout.addWidget(packagesCollapsibleButton)
 
-        # Collapsible section
+        packagesLayout = qt.QVBoxLayout(packagesCollapsibleButton)
+
+        # Button: install important Slicer extensions (e.g. PyTorch)
+        self.extensionsButton = qt.QPushButton("Prerequisite: Complete this step before proceeding")
+        self.extensionsButton.toolTip = (
+            "Shows instructions for installing required python packages (e.g. PyTorch)."
+        )
+        self.extensionsButton.connect("clicked()", self.onExtensionsClicked)
+        packagesLayout.addWidget(self.extensionsButton)
+
+        # Button: install / check dependencies
+        self.installButton = qt.QPushButton("Install MuscleMap dependencies")
+        self.installButton.toolTip = (
+            "Install the MuscleMap toolbox into Slicer's Python using pip."
+        )
+        self.installButton.connect("clicked()", self.onInstallClicked)
+        packagesLayout.addWidget(self.installButton)
+
+        # -------- Advanced section (boven Inputs) --------
+        advancedCollapsibleButton = ctk.ctkCollapsibleButton()
+        advancedCollapsibleButton.text = "Advanced"
+        self.layout.addWidget(advancedCollapsibleButton)
+
+        advancedLayout = qt.QFormLayout(advancedCollapsibleButton)
+
+        self.forceCpuCheckBox = qt.QCheckBox("Force CPU (ignore GPU)")
+        self.forceCpuCheckBox.setToolTip(
+            "If checked, MuscleMap will run on the CPU even if a GPU is available."
+        )
+        self.forceCpuCheckBox.checked = False
+        advancedLayout.addRow(self.forceCpuCheckBox)
+
+        # -------- Inputs section --------
         parametersCollapsibleButton = ctk.ctkCollapsibleButton()
-        parametersCollapsibleButton.text = "MuscleMap whole-body segmentation"
+        parametersCollapsibleButton.text = "Inputs"
         self.layout.addWidget(parametersCollapsibleButton)
 
         parametersFormLayout = qt.QFormLayout(parametersCollapsibleButton)
@@ -125,27 +157,41 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         self.inputSelector.setToolTip("Select the input whole-body image.")
         parametersFormLayout.addRow("Input volume:", self.inputSelector)
 
-        # Button: install important Slicer extensions (e.g. PyTorch)
-        self.extensionsButton = qt.QPushButton("Install important Slicer extensions")
-        self.extensionsButton.toolTip = (
-            "Shows instructions for installing required Slicer extensions (e.g. PyTorch)."
-        )
-        self.extensionsButton.connect("clicked()", self.onExtensionsClicked)
-        self.layout.addWidget(self.extensionsButton)
-
-        # Button: install / check dependencies
-        self.installButton = qt.QPushButton("Install MuscleMap dependencies")
-        self.installButton.toolTip = (
-            "Install the MuscleMap toolbox into Slicer's Python using pip."
-        )
-        self.installButton.connect("clicked()", self.onInstallClicked)
-        self.layout.addWidget(self.installButton)
-
         # Button: run segmentation
         self.runButton = qt.QPushButton("Run MuscleMap segmentation")
         self.runButton.toolTip = "Run mm_segment on the selected volume."
         self.runButton.connect("clicked()", self.onRunClicked)
         self.layout.addWidget(self.runButton)
+
+        # Outputs
+        outputsCollapsibleButton = ctk.ctkCollapsibleButton()
+        outputsCollapsibleButton.text = "Outputs"
+        self.layout.addWidget(outputsCollapsibleButton)
+
+        outputsLayout = qt.QFormLayout(outputsCollapsibleButton)
+
+        self.outputSegmentationSelector = slicer.qMRMLNodeComboBox()
+        self.outputSegmentationSelector.nodeTypes = ["vtkMRMLSegmentationNode"]
+        self.outputSegmentationSelector.selectNodeUponCreation = False
+        self.outputSegmentationSelector.addEnabled = True
+        self.outputSegmentationSelector.removeEnabled = True
+        self.outputSegmentationSelector.noneEnabled = True
+        self.outputSegmentationSelector.showHidden = False
+        self.outputSegmentationSelector.showChildNodeTypes = False
+        self.outputSegmentationSelector.setMRMLScene(slicer.mrmlScene)
+        self.outputSegmentationSelector.setToolTip(
+            "Select the segmentation for 3D visualization."
+        )
+        outputsLayout.addRow("Segmentation:", self.outputSegmentationSelector)
+
+        self.show3DButton = slicer.qMRMLSegmentationShow3DButton()
+        self.show3DButton.setToolTip("Show 3D representation of the selected segmentation.")
+        outputsLayout.addRow(self.show3DButton)
+
+        self.outputSegmentationSelector.connect(
+            "currentNodeChanged(vtkMRMLNode*)",
+            self.show3DButton.setSegmentationNode
+        )
 
         self.layout.addStretch(1)
 
@@ -153,21 +199,12 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
 
     def onExtensionsClicked(self):
         msg = (
-            "MuscleMap requires the PyTorch extension to be installed in 3D Slicer.\n\n"
-            "Please do the following steps once:\n"
-            "  1. Open the Extensions Manager (puzzle-icon in the toolbar,\n"
-            "     or via menu: View → Extensions Manager).\n"
-            "  2. Search for 'PyTorch' (or 'SlicerPyTorch'). "
-            "SlicerPyTorch automatically installs the best available PyTorch version for your system. "
-            "If no compatible CUDA build is available, it will install a CPU-only version (this is normal behaviour).\n"
-            "  3. Install that extension.\n"
-            "  4. Close Slicer completely and start it again.\n\n"
-            "After that, return to this module and click\n"
-            "'Install MuscleMap dependencies' and then 'Run MuscleMap segmentation'."
+            "MuscleMap requires the PyTorch package to be installed in 3D Slicer.\n\n"
+            "By clicking on 'Install MuscleMap dependencies', the CPU-only build of PyTorch will be installed by default so that MuscleMap works independently of hardware configurations.\n\n"
+            "If you wish to use MuscleMap with a GPU, please proceed to install the GPU-compatible PyTorch v2.4.0 build within the Slicer python console.\n\n"
+            "We recommend installing the appropriate PyTorch wheel using pip."
         )
-
-        slicer.util.infoDisplay(msg, windowTitle="Install important Slicer extensions")
-
+        slicer.util.infoDisplay(msg, windowTitle="Prerequisite: Complete this step before proceeding")
 
     def onInstallClicked(self):
         progress = qt.QProgressDialog(
@@ -198,23 +235,27 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
             slicer.util.errorDisplay("Please select an input volume first.")
             return
 
-        # Bepaal device (CPU / GPU)
+        # Read advanced option: force CPU
+        force_cpu = bool(self.forceCpuCheckBox.isChecked()) if hasattr(self, "forceCpuCheckBox") else False
+
         try:
             import torch
-            if torch.cuda.is_available():
-                device = "GPU"
+            if force_cpu:
+                device = "CPU (forced)"
             else:
-                device = "CPU"
+                if torch.cuda.is_available():
+                    device = "GPU"
+                else:
+                    device = "CPU"
         except Exception:
             device = "CPU"
 
-        # Message for user
         msg = (
             "Running MuscleMap whole-body segmentation.\n"
             f"Computation device: {device}.\n"
         )
 
-        if device == "CPU":
+        if device.startswith("CPU"):
             msg += (
                 "\nNote: Processing on CPU may be slow, depending on image size and system performance."
             )
@@ -226,7 +267,6 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
 
         logging.info(f"[MuscleMap] {msg.replace(os.linesep, ' ')}")
 
-        # Progress dialoog tonen tijdens segmentatie
         progress = qt.QProgressDialog(
             msg,
             None,
@@ -242,15 +282,16 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         slicer.app.processEvents()
 
         try:
-            self.logic.runSegmentation(inputVolume)
+            segNode = self.logic.runSegmentation(inputVolume, force_cpu=force_cpu)
+
+            if segNode:
+                self.outputSegmentationSelector.setCurrentNode(segNode)
+                self.show3DButton.setSegmentationNode(segNode)
         except Exception as e:
             slicer.util.errorDisplay(f"Segmentation failed:\n{e}")
         finally:
             progress.close()
 
-#
-# Logic
-#
 
 class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
     """Processing code for the MuscleMap whole-body segmentation module."""
@@ -265,29 +306,29 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
             import importlib.util
             return importlib.util.find_spec(name) is not None
 
-        # Check welke Python-packages we al hebben
         have_monai = have_module("monai")
         have_nibabel = have_module("nibabel")
         have_tqdm = have_module("tqdm")
         have_portalocker = have_module("portalocker")
         have_pandas = have_module("pandas")
+        have_torch = have_module("torch")
 
         import shutil
         have_mm_segment = shutil.which("mm_segment") is not None
 
-        if all([have_monai, have_nibabel, have_tqdm, have_portalocker, have_pandas, have_mm_segment]):
+        if all([have_monai, have_nibabel, have_torch, have_tqdm, have_portalocker, have_pandas, have_mm_segment]):
             logging.info("[MuscleMap] All dependencies already present, nothing to install.")
             return
 
         logging.info("[MuscleMap] Missing dependencies detected, installing...")
 
-        # Let pip zelf de juiste pandas-versie kiezen (belangrijk voor Python 3.12)
         minimal_packages = [
             "monai==1.3.2",
+            "torch==2.4.0",
             "nibabel==5.2.1",
             "tqdm==4.67.1",
             "portalocker==3.1.1",
-            "pandas",  # geen versie-pin!
+            "pandas",
         ]
 
         for pkg in minimal_packages:
@@ -306,19 +347,22 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
 
         logging.info("[MuscleMap] Dependency check/installation finished.")
 
-    def runSegmentation(self, inputVolumeNode):
+    def runSegmentation(self, inputVolumeNode, force_cpu: bool = False):
         """
         1) Export the selected Slicer volume to a temporary NIfTI file.
         2) Run 'mm_segment -i <input>' (provided by the MuscleMap toolbox).
-        3) Detect the new NIfTI outputfile from mm_segment and load it as labelmap.
+        3) Detect the new NIfTI output file from mm_segment and load it as labelmap.
+
+        Returns
+        -------
+        vtkMRMLSegmentationNode
+            De nieuw aangemaakte segmentatienode.
         """
         if not inputVolumeNode:
             raise ValueError("No input volume node provided.")
 
-        # Make sure MuscleMap is available (installs if needed)
         self.ensureDependencies()
 
-        # Temporary directory and file paths
         tempDir = tempfile.mkdtemp(prefix="MuscleMap_")
         inputPath = os.path.join(tempDir, "input.nii.gz")
 
@@ -326,15 +370,24 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         if not slicer.util.saveNode(inputVolumeNode, inputPath):
             raise RuntimeError(f"Failed to save input volume to {inputPath}")
 
-        # Houd bij welke NIfTI's er al zijn vóór de run
         before_files = {
             f for f in os.listdir(tempDir)
             if f.lower().endswith(".nii.gz")
         }
 
-        # Run mm_segment
         cmd = ["mm_segment", "-i", inputPath, "-s", "50"]
+
+        if force_cpu:
+            cmd.extend(["-g", "N"])
+        else:
+            cmd.extend(["-g", "Y"])
+
         logging.info("[MuscleMap] Running command: " + " ".join(cmd))
+
+        env = os.environ.copy()
+        if force_cpu:
+            env["CUDA_VISIBLE_DEVICES"] = ""
+            logging.info("[MuscleMap] Forcing CPU execution (CUDA_VISIBLE_DEVICES='').")
 
         result = subprocess.run(
             cmd,
@@ -342,14 +395,18 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
             stderr=subprocess.PIPE,
             text=True,
             shell=False,
-            cwd=tempDir)
+            cwd=tempDir,
+            env=env,
+        )
         logging.info("[MuscleMap] mm_segment stdout:\n" + result.stdout)
         logging.info("[MuscleMap] mm_segment stderr:\n" + result.stderr)
 
         if result.returncode != 0:
-            raise RuntimeError("mm_segment failed, see the Python console for details or create an issue on https://github.com/MuscleMap/MuscleMap.")
+            raise RuntimeError(
+                "mm_segment failed with non-zero exit code.\n\n"
+                f"Stdout:\n{result.stdout}\n\nStderr:\n{result.stderr}"
+            )
 
-        # Zoek nieuwe NIfTI-bestanden die mm_segment heeft aangemaakt
         after_files = {
             f for f in os.listdir(tempDir)
             if f.lower().endswith(".nii.gz")
@@ -361,7 +418,6 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
                 f"No new NIfTI output found in {tempDir} after running mm_segment."
             )
 
-        # Als er meerdere zijn, kies er eentje met 'dseg'/'seg'/'label' in de naam als die bestaat
         preferred = [
             f for f in new_files
             if any(key in f.lower() for key in ("dseg", "seg", "label"))
@@ -371,12 +427,10 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
 
         logging.info(f"[MuscleMap] Using output file: {outputPath}")
 
-        # 1) Laad als labelmap volume
         labelNode = slicer.util.loadLabelVolume(outputPath)
         if not labelNode:
             raise RuntimeError("Failed to load the MuscleMap output labelmap.")
 
-        # 2) Maak een segmentation node en importeer de labelmap daarin
         segmentationNode = slicer.mrmlScene.AddNewNodeByClass(
             "vtkMRMLSegmentationNode", "MuscleMapSegmentation"
         )
@@ -384,14 +438,13 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
             labelNode, segmentationNode
         )
 
-        # 3) Zorg dat de segmentatie zichtbaar is in de slice views
         segmentationNode.CreateDefaultDisplayNodes()
         segmentationNode.GetDisplayNode().SetVisibility(True)
 
-        # (optioneel) oude labelmap node weggooien, is niet meer nodig
         slicer.mrmlScene.RemoveNode(labelNode)
 
-        # 4) Achtergrond op je input; segmentatie wordt als overlay getoond
         slicer.util.setSliceViewerLayers(background=inputVolumeNode)
 
         slicer.util.infoDisplay("MuscleMap whole-body segmentation completed.")
+
+        return segmentationNode
