@@ -20,7 +20,7 @@ If you have a GPU available and installed then whole-body segmentation can be co
 - Go to MuscleMap module
 - Install important MuscleMap depencies by clicking on the button in the main module.
 - Load an imput image into the Slicer3D console. 
-    - Example open-source to test the model can be found --for example-- at [MyoSegmentum thigh ](https://osf.io/svwa7/?view_only=c2c980c17b3a40fca35d088a3cdd83e2) or [MyoSegmentum Spine ](https://osf.io/3j54b/?view-only=f5089274d4a449cda2fef1d2df0ecc56) Dependent on the availability of a GPU and image size, segmentation may a few seconds up to a minute to segment the image. 
+    - Example open-source to test the model can be found --for example-- at [MyoSegmentum thigh ](https://osf.io/svwa7/?view_only=c2c980c17b3a40fca35d088a3cdd83e2) or [MyoSegmentum Spine ](https://osf.io/3j54b/?view-only=f5089274d4a449cda2fef1d2df0ecc56). Dependent on the availability of a GPU and image size, segmentation may a few seconds up to a minute to segment the image. 
 - When this module is used for the first time, please first download and install Pytorch and MuscleMap dependencies by clicking on the button ('Install MuscleMap dependencies'). This can take several minutes. 
     - You may get an error popup: Failed to compute results ... Command ... 'pip', 'install' ... returned non-zero exit status 1. This may be normal, see what to do in Troubleshooting section
 - When dependencies are succesfully installed, click on the button ('Run MuscleMap Segmentation'). 
