@@ -4,15 +4,13 @@ import tempfile
 import logging
 import importlib.util
 import shutil
+import sys  # <-- NIEUW
 
 import slicer
 import vtk, qt, ctk
 from slicer.ScriptedLoadableModule import *
 
-
-#
-# Module metadata
-#
+MIN_PYTHON_VERSION = (3, 8)
 
 class WholeBodyMuscleSegmentation(ScriptedLoadableModule):
     """Main entry point for the MuscleMap whole-body segmentation module."""
@@ -79,10 +77,6 @@ class WholeBodyMuscleSegmentation(ScriptedLoadableModule):
         return qt.QIcon(iconPath)
 
 
-#
-# GUI
-#
-
 class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
     """User interface for the MuscleMap whole-body segmentation module."""
 
@@ -91,23 +85,20 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
 
         self.logic = WholeBodyMuscleSegmentationLogic()
 
-        # Logo
         logoLabel = qt.QLabel()
         logoPath = os.path.join(os.path.dirname(__file__), "MuscleMap.png")
         pixmap = qt.QPixmap(logoPath)
-        scaled = pixmap.scaledToWidth(300, qt.Qt.SmoothTransformation)
+        scaled = pixmap.scaledToWidth(200, qt.Qt.SmoothTransformation)
         logoLabel.setPixmap(scaled)
         logoLabel.setAlignment(qt.Qt.AlignCenter)
         self.layout.addWidget(logoLabel)
 
-        # -------- Installing packages section --------
         packagesCollapsibleButton = ctk.ctkCollapsibleButton()
         packagesCollapsibleButton.text = "Installing packages"
         self.layout.addWidget(packagesCollapsibleButton)
 
         packagesLayout = qt.QVBoxLayout(packagesCollapsibleButton)
 
-        # Button: install important Slicer extensions (e.g. PyTorch)
         self.extensionsButton = qt.QPushButton("Prerequisite: Complete this step before proceeding")
         self.extensionsButton.toolTip = (
             "Shows instructions for installing required python packages (e.g. PyTorch)."
@@ -115,7 +106,6 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         self.extensionsButton.connect("clicked()", self.onExtensionsClicked)
         packagesLayout.addWidget(self.extensionsButton)
 
-        # Button: install / check dependencies
         self.installButton = qt.QPushButton("Install MuscleMap dependencies")
         self.installButton.toolTip = (
             "Install the MuscleMap toolbox into Slicer's Python using pip."
@@ -123,7 +113,6 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         self.installButton.connect("clicked()", self.onInstallClicked)
         packagesLayout.addWidget(self.installButton)
 
-        # -------- Advanced section (boven Inputs) --------
         advancedCollapsibleButton = ctk.ctkCollapsibleButton()
         advancedCollapsibleButton.text = "Advanced"
         self.layout.addWidget(advancedCollapsibleButton)
@@ -137,20 +126,24 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         self.forceCpuCheckBox.checked = False
         advancedLayout.addRow(self.forceCpuCheckBox)
 
-        # -------- Inputs section --------
         parametersCollapsibleButton = ctk.ctkCollapsibleButton()
         parametersCollapsibleButton.text = "Inputs"
         self.layout.addWidget(parametersCollapsibleButton)
 
         parametersFormLayout = qt.QFormLayout(parametersCollapsibleButton)
 
-        # Input volume selector
+        self.loadFromFileButton = qt.QPushButton("Load volume from file...")
+        self.loadFromFileButton.toolTip = "Select an image file from disk and load it as input volume."
+        self.loadFromFileButton.connect("clicked()", self.onLoadFromFileClicked)
+        parametersFormLayout.addRow(self.loadFromFileButton)
+
         self.inputSelector = slicer.qMRMLNodeComboBox()
         self.inputSelector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
         self.inputSelector.selectNodeUponCreation = True
         self.inputSelector.addEnabled = False
         self.inputSelector.removeEnabled = False
-        self.inputSelector.noneEnabled = False
+        self.inputSelector.noneEnabled = True
+        self.inputSelector.noneDisplay = ""  
         self.inputSelector.showHidden = False
         self.inputSelector.showChildNodeTypes = False
         self.inputSelector.setMRMLScene(slicer.mrmlScene)
@@ -197,12 +190,42 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
 
     # --- UI callbacks ---
 
+    def onLoadFromFileClicked(self):
+        fileFilters = (
+            "Volume files (*.nii *.nii.gz *.nrrd *.mha *.mhd);;"
+            "All files (*)"
+        )
+        filePath = qt.QFileDialog.getOpenFileName(
+            slicer.util.mainWindow(),
+            "Select input volume",
+            "",
+            fileFilters
+        )
+
+        if not filePath:
+            return
+
+        volumeNode = slicer.util.loadVolume(filePath)
+        if not volumeNode:
+            slicer.util.errorDisplay(f"Failed to load volume from file:\n{filePath}")
+            return
+
+        self.inputSelector.setCurrentNode(volumeNode)
+
     def onExtensionsClicked(self):
         msg = (
-            "MuscleMap requires the PyTorch package to be installed in 3D Slicer.\n\n"
-            "By clicking on 'Install MuscleMap dependencies', the CPU-only build of PyTorch will be installed by default so that MuscleMap works independently of hardware configurations.\n\n"
-            "If you wish to use MuscleMap with a GPU, please proceed to install the GPU-compatible PyTorch v2.4.0 build within the Slicer python console.\n\n"
-            "We recommend installing the appropriate PyTorch wheel using pip."
+            "MuscleMap requires the PyTorch package to be installed in 3D Slicer via the SlicerPyTorch extension.\n\n"
+            "Step 1 – Install the 'PyTorch' (SlicerPyTorch) extension:\n"
+            "  • In Slicer, go to:  View → Extensions Manager\n"
+            "  • Search for:  PyTorch or SlicerPyTorch\n"
+            "  • Install the extension and restart Slicer.\n\n"
+            "Step 2 – Download and install PyTorch inside the SlicerPyTorch module:\n"
+            "  • Go to:  View → Modules\n"
+            "  • Choose:  Utilities → PyTorch (or 'SlicerPyTorch')\n"
+            "  • Click the button 'Install PyTorch' and select the CPU or GPU build that matches your system.\n\n"
+            "Step 3 – Return to the MuscleMap module and click 'Install MuscleMap dependencies'\n"
+            "         to install the remaining Python packages used by MuscleMap.\n\n"
+            "We recommend installing the appropriate PyTorch wheel using pip as suggested by the SlicerPyTorch module."
         )
         slicer.util.infoDisplay(msg, windowTitle="Prerequisite: Complete this step before proceeding")
 
@@ -297,51 +320,98 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
     """Processing code for the MuscleMap whole-body segmentation module."""
 
     def ensureDependencies(self):
-        """
-        Ensure that the minimal dependencies for mm_segment are available.
-        Install only what is missing.
-        """
+        if sys.version_info < MIN_PYTHON_VERSION:
+            msg = (
+                "MuscleMap requires at least Python "
+                f"{MIN_PYTHON_VERSION[0]}.{MIN_PYTHON_VERSION[1]}.\n\n"
+                f"You are currently running Python {sys.version_info.major}.{sys.version_info.minor}.\n\n"
+                "Please install a more recent 3D Slicer version "
+                "(for example Slicer 5.2 or newer) from https://slicer.org "
+                "and then reinstall the MuscleMap extension."
+            )
+            logging.error("[MuscleMap] " + msg.replace("\n", " "))
+            try:
+                slicer.util.errorDisplay(msg, windowTitle="MuscleMap – incompatible Python")
+            except Exception:
+                pass
+            raise RuntimeError(msg)
 
         def have_module(name: str) -> bool:
             import importlib.util
             return importlib.util.find_spec(name) is not None
 
-        have_monai = have_module("monai")
-        have_nibabel = have_module("nibabel")
-        have_tqdm = have_module("tqdm")
+        have_monai       = have_module("monai")
+        have_nibabel     = have_module("nibabel")
         have_portalocker = have_module("portalocker")
-        have_pandas = have_module("pandas")
-        have_torch = have_module("torch")
+        have_pandas      = have_module("pandas")
+        have_torch       = have_module("torch")
+        have_sklearn     = have_module("sklearn")
+        have_tqdm        = have_module("tqdm")
+        have_joblib      = have_module("joblib")
+        have_threadpool  = have_module("threadpoolctl")
+        have_scipy       = have_module("scipy")
+        have_pytz        = have_module("pytz")
+        have_dateutil    = have_module("dateutil")
 
+        if not have_torch:
+            logging.error(
+                "[MuscleMap] PyTorch (torch) is niet beschikbaar in de huidige Slicer-omgeving."
+            )
+            raise RuntimeError(
+                "PyTorch (torch) is not installed in this 3D Slicer Python environment.\n\n"
+                "To install PyTorch correctly, please follow these steps:\n\n"
+                "  1) Install the 'PyTorch' / 'SlicerPyTorch' extension:\n"
+                "       • In Slicer, go to:  View → Extensions Manager\n"
+                "       • Search for:  PyTorch or SlicerPyTorch\n"
+                "       • Install the extension and restart Slicer\n\n"
+                "  2) After restarting, open the SlicerPyTorch utility module:\n"
+                "       • Go to:  View → Modules\n"
+                "       • Choose:  Utilities → PyTorch (or 'SlicerPyTorch')\n\n"
+                "  3) In that module, click the button:\n"
+                "       “Install PyTorch”  (CPU or GPU version depending on your system)\n\n"
+                "After completing these steps, return to MuscleMap and try again."
+            )
+
+        import torch
         import shutil
         have_mm_segment = shutil.which("mm_segment") is not None
 
-        if all([have_monai, have_nibabel, have_torch, have_tqdm, have_portalocker, have_pandas, have_mm_segment]):
+        if all([
+            have_monai, have_nibabel, have_torch, have_joblib, have_dateutil,
+            have_pytz, have_threadpool, have_scipy, have_tqdm,
+            have_portalocker, have_sklearn, have_pandas, have_mm_segment
+        ]):
             logging.info("[MuscleMap] All dependencies already present, nothing to install.")
             return
 
         logging.info("[MuscleMap] Missing dependencies detected, installing...")
 
         minimal_packages = [
-            "monai==1.3.2",
-            "torch==2.4.0",
-            "nibabel==5.2.1",
-            "tqdm==4.67.1",
-            "portalocker==3.1.1",
-            "pandas",
+            ("monai",         "monai==1.5.1"),
+            ("nibabel",       "nibabel==5.2.1"),
+            ("tqdm",          "tqdm==4.67.1"),
+            ("portalocker",   "portalocker==3.1.1"),
+            ("pandas",        "pandas"),
+            ("sklearn",       "scikit-learn"),
+            ("joblib",        "joblib"),
+            ("threadpoolctl", "threadpoolctl"),
+            ("scipy",         "scipy"),
+            ("pytz",          "pytz"),
+            ("dateutil",      "python-dateutil"),
         ]
 
-        for pkg in minimal_packages:
-            module_name = pkg.split("==")[0]
+        for module_name, pkg in minimal_packages:
             if not have_module(module_name):
-                logging.info(f"[MuscleMap] Installing: {pkg}")
-                slicer.util.pip_install(pkg)
+                logging.info(f"[MuscleMap] Installing (no-deps): {pkg}")
+                slicer.util.pip_install(["--no-deps", pkg])
             else:
                 logging.info(f"[MuscleMap] {pkg} already installed, skipping.")
 
         if not have_mm_segment:
             logging.info("[MuscleMap] Installing MuscleMap (no deps)...")
-            slicer.util.pip_install("git+https://github.com/MuscleMap/MuscleMap.git --no-deps")
+            slicer.util.pip_install(
+                ["--no-deps", "git+https://github.com/MuscleMap/MuscleMap.git"]
+            )
         else:
             logging.info("[MuscleMap] mm_segment already found, skipping MuscleMap install.")
 
@@ -353,10 +423,6 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         2) Run 'mm_segment -i <input>' (provided by the MuscleMap toolbox).
         3) Detect the new NIfTI output file from mm_segment and load it as labelmap.
 
-        Returns
-        -------
-        vtkMRMLSegmentationNode
-            De nieuw aangemaakte segmentatienode.
         """
         if not inputVolumeNode:
             raise ValueError("No input volume node provided.")
@@ -372,7 +438,7 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
 
         before_files = {
             f for f in os.listdir(tempDir)
-            if f.lower().endswith(".nii.gz")
+            if f.lower().endswith((".nii", ".nii.gz"))
         }
 
         cmd = ["mm_segment", "-i", inputPath, "-s", "50"]
@@ -393,7 +459,7 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
+            text=True,     
             shell=False,
             cwd=tempDir,
             env=env,
@@ -404,18 +470,19 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         if result.returncode != 0:
             raise RuntimeError(
                 "mm_segment failed with non-zero exit code.\n\n"
-                f"Stdout:\n{result.stdout}\n\nStderr:\n{result.stderr}"
             )
 
         after_files = {
             f for f in os.listdir(tempDir)
-            if f.lower().endswith(".nii.gz")
+            if f.lower().endswith((".nii", ".nii.gz"))
         }
+
         new_files = sorted(list(after_files - before_files))
 
         if not new_files:
             raise RuntimeError(
-                f"No new NIfTI output found in {tempDir} after running mm_segment."
+                "No new NIfTI output found in "
+                f"{tempDir} after running mm_segment.\n\n"
             )
 
         preferred = [
