@@ -1,6 +1,6 @@
-# SlicerMuscleMap: An Open-Source, Community-Supported, wholebody segmentation model for muscle in 3D Slicer.
+# SlicerMuscleMap: An Open-Source, Community-Supported, Wholebody Segmentation Model for Muscle in 3D Slicer.
 
-The official documentation for **MuscleMap**, an open-source framework for **muscle segmentation** and quantitative analysis of **muscle volume** and **intramuscular fat infiltration**, can be found at https://musclemap.github.io/MuscleMap/.
+The official documentation for **MuscleMap**, an open-source framework for automated **muscle segmentation** and quantitative analysis of **muscle volume** and **intramuscular fat infiltration**, can be found at https://musclemap.github.io/MuscleMap/.
 
 ![][MuscleMap_Slicer3D.png]
 
