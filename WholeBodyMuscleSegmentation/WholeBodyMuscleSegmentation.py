@@ -338,8 +338,8 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
 
     def _build_label_dataframe_and_color_node(self):
         """
-        - Get labels from json
-        - Build a dataframe B
+        - Get labels from json from github
+        - Build a dataframe 
         - Update  vtkMRMLColorTableNode where index == label value
         """
         data = self._fetch_labels_json(LABELS_JSON_URL)
@@ -385,7 +385,6 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
                     "hex": "#{:02X}{:02X}{:02X}".format(int(r * 255), int(g * 255), int(b * 255)),
                 }
             )
-
         df = None
         try:
             import pandas as pd
@@ -452,7 +451,7 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
 
         if not have_torch:
             logging.error(
-                "[MuscleMap] PyTorch (torch) is niet beschikbaar in de huidige Slicer-omgeving."
+                "[MuscleMap] PyTorch (torch) is not accessible in Slicer."
             )
             raise RuntimeError(
                 "PyTorch (torch) is not installed in this 3D Slicer Python environment.\n\n"
