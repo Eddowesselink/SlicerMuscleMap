@@ -9,8 +9,17 @@ import sys  # <-- NIEUW
 import slicer
 import vtk, qt, ctk
 from slicer.ScriptedLoadableModule import *
+import json
+import urllib.request
+import colorsys
+
 
 MIN_PYTHON_VERSION = (3, 8)
+
+LABELS_JSON_URL = (
+    "https://raw.githubusercontent.com/MuscleMap/MuscleMap/main/scripts/models/wholebody/"
+    "contrast_agnostic_wholebody_model.json"
+)
 
 class WholeBodyMuscleSegmentation(ScriptedLoadableModule):
     """Main entry point for the MuscleMap whole-body segmentation module."""
@@ -319,6 +328,94 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
 class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
     """Processing code for the MuscleMap whole-body segmentation module."""
 
+    def _fetch_labels_json(self, url: str) -> dict:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "3D Slicer MuscleMap"},
+        )
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    def _build_label_dataframe_and_color_node(self):
+        """
+        - Get labels from json
+        - Build a dataframe B
+        - Update  vtkMRMLColorTableNode where index == label value
+        """
+        data = self._fetch_labels_json(LABELS_JSON_URL)
+
+        labels = data.get("labels", [])
+        if not labels:
+            raise RuntimeError("No 'labels' found in wholebody model json.")
+
+        labels_sorted = sorted(labels, key=lambda x: int(x.get("value", 0)))
+        values = [int(x["value"]) for x in labels_sorted]
+        max_value = max(values)
+
+        rows = []
+        n = len(labels_sorted)
+
+        sat = 0.75
+        val = 0.90
+
+        for i, item in enumerate(labels_sorted):
+            region = (item.get("region") or "").strip()
+            anatomy = (item.get("anatomy") or "").strip()
+            side = (item.get("side") or "").strip()
+            value_i = int(item["value"])
+
+            if side and side.lower() != "no side":
+                name = f"{anatomy} ({side})"
+            else:
+                name = f"{anatomy}"
+
+            h = (i * 0.61803398875) % 1.0
+            r, g, b = colorsys.hsv_to_rgb(h, sat, val)
+
+            rows.append(
+                {
+                    "value": value_i,
+                    "name": name,
+                    "region": region,
+                    "anatomy": anatomy,
+                    "side": side,
+                    "r": float(r),
+                    "g": float(g),
+                    "b": float(b),
+                    "hex": "#{:02X}{:02X}{:02X}".format(int(r * 255), int(g * 255), int(b * 255)),
+                }
+            )
+
+        df = None
+        try:
+            import pandas as pd
+            df = pd.DataFrame(rows, columns=["value", "name", "region", "anatomy", "side", "hex", "r", "g", "b"])
+        except Exception:
+            df = rows  # fallback
+
+        colorNodeName = "MuscleMapWholeBodyLabels"
+        existing = slicer.util.getNode(colorNodeName) if slicer.mrmlScene.GetFirstNodeByName(colorNodeName) else None
+
+        if existing and existing.IsA("vtkMRMLColorTableNode"):
+            colorNode = existing
+        else:
+            colorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLColorTableNode", colorNodeName)
+            colorNode.SetTypeToUser()
+
+        colorNode.SetNumberOfColors(max_value + 1)
+
+        for idx in range(max_value + 1):
+            colorNode.SetColor(idx, "", 0.0, 0.0, 0.0, 0.0)
+
+        colorNode.SetColor(0, "background", 0.0, 0.0, 0.0, 0.0)
+
+        for row in rows:
+            colorNode.SetColor(int(row["value"]), row["name"], row["r"], row["g"], row["b"], 1.0)
+
+        self._label_df = df
+        self._label_color_node = colorNode
+        return df, colorNode
+
     def ensureDependencies(self):
         if sys.version_info < MIN_PYTHON_VERSION:
             msg = (
@@ -497,6 +594,19 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         labelNode = slicer.util.loadLabelVolume(outputPath)
         if not labelNode:
             raise RuntimeError("Failed to load the MuscleMap output labelmap.")
+    
+        # --- NEW: apply MuscleMap label names + colors from JSON (fixes VTK out-of-range colors) ---
+        try:
+            df, colorNode = self._build_label_dataframe_and_color_node()
+
+            displayNode = labelNode.GetDisplayNode()
+            if displayNode:
+                displayNode.SetAndObserveColorNodeID(colorNode.GetID())
+                displayNode.SetInterpolate(False)
+
+            logging.info(f"[MuscleMap] Loaded {len(df) if hasattr(df, '__len__') else 'N/A'} label definitions from JSON.")
+        except Exception as e:
+            logging.warning(f"[MuscleMap] Could not apply JSON-based label colors/names: {e}")
 
         segmentationNode = slicer.mrmlScene.AddNewNodeByClass(
             "vtkMRMLSegmentationNode", "MuscleMapSegmentation"
