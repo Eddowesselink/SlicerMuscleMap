@@ -1,0 +1,19 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Slicer / CMake build artifacts ---
+build/
+Build/
+*CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+
+# --- macOS ---
+.DS_Store
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
