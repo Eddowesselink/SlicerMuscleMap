@@ -537,7 +537,7 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
             if f.lower().endswith((".nii", ".nii.gz"))
         }
 
-        cmd = ["mm_segment", "-i", inputPath, "-s", "75"]
+        cmd = ["mm_segment", "-i", inputPath, "-s", "90"]
 
         if force_cpu:
             cmd.extend(["-g", "N"])
