@@ -135,6 +135,14 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         self.forceCpuCheckBox.checked = False
         advancedLayout.addRow(self.forceCpuCheckBox)
 
+
+        self.forceLowerOverlapCheckBox = qt.QCheckBox("Force lower overlap")
+        self.forceLowerOverlapCheckBox.setToolTip(
+            "If checked, run mm_segment with -s 75. Otherwise uses -s 90."
+        )
+        self.forceLowerOverlapCheckBox.checked = False
+        advancedLayout.addRow(self.forceLowerOverlapCheckBox)
+
         parametersCollapsibleButton = ctk.ctkCollapsibleButton()
         parametersCollapsibleButton.text = "Inputs"
         self.layout.addWidget(parametersCollapsibleButton)
@@ -269,6 +277,7 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
 
         # Read advanced option: force CPU
         force_cpu = bool(self.forceCpuCheckBox.isChecked()) if hasattr(self, "forceCpuCheckBox") else False
+        force_lower_overlap = bool(self.forceLowerOverlapCheckBox.isChecked()) if hasattr(self, "forceLowerOverlapCheckBox") else False
 
         try:
             import torch
@@ -290,6 +299,15 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         if device.startswith("CPU"):
             msg += (
                 "\nNote: Processing on CPU may be slow, depending on image size and system performance."
+            )
+
+        if force_lower_overlap:
+            msg += (
+                "\nOptional setting enabled: overlap is lowered (mm_segment -s 75)."
+            )
+        else:
+            msg += (
+                  "\nTip: For segmentation issues related to processing speed, enable 'Force lower overlap' (mm_segment -s 75)."
             )
 
         msg += (
@@ -314,8 +332,7 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         slicer.app.processEvents()
 
         try:
-            segNode = self.logic.runSegmentation(inputVolume, force_cpu=force_cpu)
-
+            segNode = self.logic.runSegmentation(inputVolume, force_cpu=force_cpu,force_lower_overlap=force_lower_overlap)
             if segNode:
                 self.outputSegmentationSelector.setCurrentNode(segNode)
                 self.show3DButton.setSegmentationNode(segNode)
@@ -323,7 +340,6 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
             slicer.util.errorDisplay(f"Segmentation failed:\n{e}")
         finally:
             progress.close()
-
 
 class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
     """Processing code for the MuscleMap whole-body segmentation module."""
@@ -513,7 +529,7 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
 
         logging.info("[MuscleMap] Dependency check/installation finished.")
 
-    def runSegmentation(self, inputVolumeNode, force_cpu: bool = False):
+    def runSegmentation(self, inputVolumeNode, force_cpu: bool = False, force_lower_overlap: bool = False):
         """
         1) Export the selected Slicer volume to a temporary NIfTI file.
         2) Run 'mm_segment -i <input>' (provided by the MuscleMap toolbox).
@@ -537,7 +553,8 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
             if f.lower().endswith((".nii", ".nii.gz"))
         }
 
-        cmd = ["mm_segment", "-i", inputPath, "-s", "90"]
+        s_value = "75" if force_lower_overlap else "90"
+        cmd = ["mm_segment", "-i", inputPath, "-s", s_value]
 
         if force_cpu:
             cmd.extend(["-g", "N"])
