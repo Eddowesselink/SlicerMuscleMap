@@ -5,6 +5,8 @@ import logging
 import importlib.util
 import shutil
 import sys
+import glob
+import time
 
 import slicer
 import vtk, qt, ctk
@@ -337,16 +339,8 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         # Background
         colorNode.SetColor(0, "background", 0.0, 0.0, 0.0, 0.0)
 
-        # -------------------------------------------------
-        # Color strategy (strong left/right contrast):
-        # - One base HUE per anatomy (ignoring side)
-        # - Left  = darker + more saturated
-        # - Right = much lighter + less saturated
-        # -------------------------------------------------
-
         base_colors = {}  # anatomy -> hue (float 0..1)
 
-        # Strong contrast settings
         base_saturation_left = 0.85
         base_value_left = 0.65
 
@@ -359,19 +353,16 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
             side = side_raw.lower()
             label_value = int(item["value"])
 
-            # Assign one hue per anatomy (stable across runs)
             if anatomy not in base_colors:
                 h = (len(base_colors) * 0.61803398875) % 1.0
                 base_colors[anatomy] = h
 
             h = base_colors[anatomy]
 
-            # Decide left/right color variant
             if side == "right":
                 s = saturation_right
                 v = value_right
             else:
-                # left + midline + "no side" -> use left style
                 s = base_saturation_left
                 v = base_value_left
 
@@ -385,8 +376,6 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
             colorNode.SetColor(label_value, name, float(r), float(g), float(b), 1.0)
 
         return colorNode
-
-
 
     def ensureDependencies(self):
         if sys.version_info < MIN_PYTHON_VERSION:
@@ -493,8 +482,6 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         if not slicer.util.saveNode(inputVolumeNode, inputPath):
             raise RuntimeError(f"Failed to save input volume to {inputPath}")
 
-        before_files = {f for f in os.listdir(tempDir) if f.lower().endswith((".nii", ".nii.gz"))}
-
         s_value = "75" if force_lower_overlap else "90"
         cmd = ["mm_segment", "-i", inputPath, "-s", s_value]
         cmd.extend(["-g", "N" if force_cpu else "Y"])
@@ -505,6 +492,8 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         if force_cpu:
             env["CUDA_VISIBLE_DEVICES"] = ""
             logging.info("[MuscleMap] Forcing CPU execution (CUDA_VISIBLE_DEVICES='').")
+
+        t0 = time.time()
 
         result = subprocess.run(
             cmd,
@@ -521,15 +510,31 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         if result.returncode != 0:
             raise RuntimeError("mm_segment failed with non-zero exit code.\n\n" + result.stderr)
 
-        after_files = {f for f in os.listdir(tempDir) if f.lower().endswith((".nii", ".nii.gz"))}
-        new_files = sorted(list(after_files - before_files))
+        # --- NEW: zoek output recursief (ook in subfolders), en accepteer evt .nrrd ---
+        candidates = []
+        for ext in ("*.nii", "*.nii.gz", "*.nrrd"):
+            candidates.extend(glob.glob(os.path.join(tempDir, "**", ext), recursive=True))
 
-        if not new_files:
-            raise RuntimeError(f"No new NIfTI output found in {tempDir} after running mm_segment.\n\n")
+        # input zelf uitsluiten
+        candidates = [p for p in candidates if os.path.abspath(p) != os.path.abspath(inputPath)]
 
-        preferred = [f for f in new_files if any(key in f.lower() for key in ("dseg", "seg", "label"))]
-        outputFileName = preferred[0] if preferred else new_files[0]
-        outputPath = os.path.join(tempDir, outputFileName)
+        # voorkeur: bestanden die na mm_segment start zijn aangepast/geschreven
+        recent = [p for p in candidates if os.path.getmtime(p) >= (t0 - 1.0)]
+        use_list = recent if recent else candidates
+
+        if not use_list:
+            # laat stdout/stderr zien voor debugging
+            raise RuntimeError(
+                f"No output volume found in {tempDir} after running mm_segment.\n\n"
+                f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}\n"
+            )
+
+        # voorkeur: typische seg namen
+        preferred = [
+            p for p in use_list
+            if any(k in os.path.basename(p).lower() for k in ("dseg", "seg", "label", "mask"))
+        ]
+        outputPath = preferred[0] if preferred else max(use_list, key=os.path.getmtime)
 
         logging.info(f"[MuscleMap] Using output file: {outputPath}")
 
