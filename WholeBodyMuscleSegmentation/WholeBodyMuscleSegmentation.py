@@ -4,7 +4,7 @@ import tempfile
 import logging
 import importlib.util
 import shutil
-import sys  # <-- NIEUW
+import sys
 
 import slicer
 import vtk, qt, ctk
@@ -21,6 +21,7 @@ LABELS_JSON_URL = (
     "contrast_agnostic_wholebody_model.json"
 )
 
+
 class WholeBodyMuscleSegmentation(ScriptedLoadableModule):
     """Main entry point for the MuscleMap whole-body segmentation module."""
 
@@ -30,9 +31,6 @@ class WholeBodyMuscleSegmentation(ScriptedLoadableModule):
         parent.categories = ["MuscleMap"]
         parent.contributors = ["Eddo Wesselink and Kenneth Arnold Weber"]
 
-        # -----------------------------
-        # HELP SECTION
-        # -----------------------------
         parent.helpText = (
             "MuscleMap provides automated whole-body muscle segmentation directly inside 3D Slicer.\n\n"
             "Features:\n"
@@ -72,17 +70,11 @@ class WholeBodyMuscleSegmentation(ScriptedLoadableModule):
             "We gratefully acknowledge the developers and contributors of these projects."
         )
 
-        iconPath = os.path.join(
-            os.path.dirname(__file__),
-            "Resources", "Icons", "MuscleMap.png"
-        )
+        iconPath = os.path.join(os.path.dirname(__file__), "Resources", "Icons", "MuscleMap.png")
         parent.icon = qt.QIcon(iconPath)
 
     def icon(self):
-        iconPath = os.path.join(
-            os.path.dirname(__file__),
-            "Resources", "Icons", "MuscleMap.png"
-        )
+        iconPath = os.path.join(os.path.dirname(__file__), "Resources", "Icons", "MuscleMap.png")
         return qt.QIcon(iconPath)
 
 
@@ -109,16 +101,12 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         packagesLayout = qt.QVBoxLayout(packagesCollapsibleButton)
 
         self.extensionsButton = qt.QPushButton("Prerequisite: Complete this step before proceeding")
-        self.extensionsButton.toolTip = (
-            "Shows instructions for installing required python packages (e.g. PyTorch)."
-        )
+        self.extensionsButton.toolTip = "Shows instructions for installing required python packages (e.g. PyTorch)."
         self.extensionsButton.connect("clicked()", self.onExtensionsClicked)
         packagesLayout.addWidget(self.extensionsButton)
 
         self.installButton = qt.QPushButton("Install MuscleMap dependencies")
-        self.installButton.toolTip = (
-            "Install the MuscleMap toolbox into Slicer's Python using pip."
-        )
+        self.installButton.toolTip = "Install the MuscleMap toolbox into Slicer's Python using pip."
         self.installButton.connect("clicked()", self.onInstallClicked)
         packagesLayout.addWidget(self.installButton)
 
@@ -129,17 +117,12 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         advancedLayout = qt.QFormLayout(advancedCollapsibleButton)
 
         self.forceCpuCheckBox = qt.QCheckBox("Force CPU (ignore GPU)")
-        self.forceCpuCheckBox.setToolTip(
-            "If checked, MuscleMap will run on the CPU even if a GPU is available."
-        )
+        self.forceCpuCheckBox.setToolTip("If checked, MuscleMap will run on the CPU even if a GPU is available.")
         self.forceCpuCheckBox.checked = False
         advancedLayout.addRow(self.forceCpuCheckBox)
 
-
         self.forceLowerOverlapCheckBox = qt.QCheckBox("Force lower overlap")
-        self.forceLowerOverlapCheckBox.setToolTip(
-            "If checked, run mm_segment with -s 75. Otherwise uses -s 90."
-        )
+        self.forceLowerOverlapCheckBox.setToolTip("If checked, run mm_segment with -s 75. Otherwise uses -s 90.")
         self.forceLowerOverlapCheckBox.checked = False
         advancedLayout.addRow(self.forceLowerOverlapCheckBox)
 
@@ -160,20 +143,18 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         self.inputSelector.addEnabled = False
         self.inputSelector.removeEnabled = False
         self.inputSelector.noneEnabled = True
-        self.inputSelector.noneDisplay = ""  
+        self.inputSelector.noneDisplay = ""
         self.inputSelector.showHidden = False
         self.inputSelector.showChildNodeTypes = False
         self.inputSelector.setMRMLScene(slicer.mrmlScene)
         self.inputSelector.setToolTip("Select the input whole-body image.")
         parametersFormLayout.addRow("Input volume:", self.inputSelector)
 
-        # Button: run segmentation
         self.runButton = qt.QPushButton("Run MuscleMap segmentation")
         self.runButton.toolTip = "Run mm_segment on the selected volume."
         self.runButton.connect("clicked()", self.onRunClicked)
         self.layout.addWidget(self.runButton)
 
-        # Outputs
         outputsCollapsibleButton = ctk.ctkCollapsibleButton()
         outputsCollapsibleButton.text = "Outputs"
         self.layout.addWidget(outputsCollapsibleButton)
@@ -189,9 +170,7 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         self.outputSegmentationSelector.showHidden = False
         self.outputSegmentationSelector.showChildNodeTypes = False
         self.outputSegmentationSelector.setMRMLScene(slicer.mrmlScene)
-        self.outputSegmentationSelector.setToolTip(
-            "Select the segmentation for 3D visualization."
-        )
+        self.outputSegmentationSelector.setToolTip("Select the segmentation for 3D visualization.")
         outputsLayout.addRow("Segmentation:", self.outputSegmentationSelector)
 
         self.show3DButton = slicer.qMRMLSegmentationShow3DButton()
@@ -205,8 +184,6 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
 
         self.layout.addStretch(1)
 
-    # --- UI callbacks ---
-
     def onLoadFromFileClicked(self):
         fileFilters = (
             "Volume files (*.nii *.nii.gz *.nrrd *.mha *.mhd);;"
@@ -218,7 +195,6 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
             "",
             fileFilters
         )
-
         if not filePath:
             return
 
@@ -250,10 +226,7 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         progress = qt.QProgressDialog(
             "Installing MuscleMap dependencies...\n\n"
             "This may take a while, depending on your internet connection.",
-            None,
-            0,
-            0,
-            slicer.util.mainWindow()
+            None, 0, 0, slicer.util.mainWindow()
         )
         progress.windowTitle = "Installing MuscleMap"
         progress.setWindowModality(qt.Qt.WindowModal)
@@ -275,7 +248,6 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
             slicer.util.errorDisplay("Please select an input volume first.")
             return
 
-        # Read advanced option: force CPU
         force_cpu = bool(self.forceCpuCheckBox.isChecked()) if hasattr(self, "forceCpuCheckBox") else False
         force_lower_overlap = bool(self.forceLowerOverlapCheckBox.isChecked()) if hasattr(self, "forceLowerOverlapCheckBox") else False
 
@@ -284,10 +256,7 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
             if force_cpu:
                 device = "CPU (forced)"
             else:
-                if torch.cuda.is_available():
-                    device = "GPU"
-                else:
-                    device = "CPU"
+                device = "GPU" if torch.cuda.is_available() else "CPU"
         except Exception:
             device = "CPU"
 
@@ -297,18 +266,12 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         )
 
         if device.startswith("CPU"):
-            msg += (
-                "\nNote: Processing on CPU may be slow, depending on image size and system performance."
-            )
+            msg += "\nNote: Processing on CPU may be slow, depending on image size and system performance."
 
         if force_lower_overlap:
-            msg += (
-                "\nOptional setting enabled: overlap is lowered (mm_segment -s 75)."
-            )
+            msg += "\nOptional setting enabled: overlap is lowered (mm_segment -s 75)."
         else:
-            msg += (
-                  "\nTip: For segmentation issues related to processing speed, enable 'Force lower overlap' (mm_segment -s 75)."
-            )
+            msg += "\nTip: For segmentation issues related to processing speed, enable 'Force lower overlap' (mm_segment -s 75)."
 
         msg += (
             "\n\nIf you use MuscleMap models for research, "
@@ -317,13 +280,7 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
 
         logging.info(f"[MuscleMap] {msg.replace(os.linesep, ' ')}")
 
-        progress = qt.QProgressDialog(
-            msg,
-            None,
-            0,
-            0,
-            slicer.util.mainWindow()
-        )
+        progress = qt.QProgressDialog(msg, None, 0, 0, slicer.util.mainWindow())
         progress.setCancelButtonText("Cancel")
         progress.windowTitle = "MuscleMap segmentation"
         progress.setWindowModality(qt.Qt.WindowModal)
@@ -332,7 +289,11 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         slicer.app.processEvents()
 
         try:
-            segNode = self.logic.runSegmentation(inputVolume, force_cpu=force_cpu,force_lower_overlap=force_lower_overlap)
+            segNode = self.logic.runSegmentation(
+                inputVolume,
+                force_cpu=force_cpu,
+                force_lower_overlap=force_lower_overlap
+            )
             if segNode:
                 self.outputSegmentationSelector.setCurrentNode(segNode)
                 self.show3DButton.setSegmentationNode(segNode)
@@ -341,95 +302,91 @@ class WholeBodyMuscleSegmentationWidget(ScriptedLoadableModuleWidget):
         finally:
             progress.close()
 
+
 class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
     """Processing code for the MuscleMap whole-body segmentation module."""
 
     def _fetch_labels_json(self, url: str) -> dict:
-        req = urllib.request.Request(
-            url,
-            headers={"User-Agent": "3D Slicer MuscleMap"},
-        )
+        req = urllib.request.Request(url, headers={"User-Agent": "3D Slicer MuscleMap"})
         with urllib.request.urlopen(req, timeout=20) as resp:
             return json.loads(resp.read().decode("utf-8"))
 
-    def _build_label_dataframe_and_color_node(self):
-        """
-        - Get labels from json from github
-        - Build a dataframe 
-        - Update  vtkMRMLColorTableNode where index == label value
-        """
+    def _build_colortable_from_labels_json(self):
         data = self._fetch_labels_json(LABELS_JSON_URL)
-
         labels = data.get("labels", [])
         if not labels:
             raise RuntimeError("No 'labels' found in wholebody model json.")
 
-        labels_sorted = sorted(labels, key=lambda x: int(x.get("value", 0)))
-        values = [int(x["value"]) for x in labels_sorted]
-        max_value = max(values)
+        labels_sorted = sorted(labels, key=lambda x: int(x["value"]))
+        max_value = max(int(x["value"]) for x in labels_sorted)
 
-        rows = []
-        n = len(labels_sorted)
+        colorNodeName = "MuscleMapWholeBody_ColorTable"
 
-        sat = 0.75
-        val = 0.90
-
-        for i, item in enumerate(labels_sorted):
-            region = (item.get("region") or "").strip()
-            anatomy = (item.get("anatomy") or "").strip()
-            side = (item.get("side") or "").strip()
-            value_i = int(item["value"])
-
-            if side and side.lower() != "no side":
-                name = f"{anatomy} ({side})"
-            else:
-                name = f"{anatomy}"
-
-            h = (i * 0.61803398875) % 1.0
-            r, g, b = colorsys.hsv_to_rgb(h, sat, val)
-
-            rows.append(
-                {
-                    "value": value_i,
-                    "name": name,
-                    "region": region,
-                    "anatomy": anatomy,
-                    "side": side,
-                    "r": float(r),
-                    "g": float(g),
-                    "b": float(b),
-                    "hex": "#{:02X}{:02X}{:02X}".format(int(r * 255), int(g * 255), int(b * 255)),
-                }
-            )
-        df = None
         try:
-            import pandas as pd
-            df = pd.DataFrame(rows, columns=["value", "name", "region", "anatomy", "side", "hex", "r", "g", "b"])
+            colorNode = slicer.util.getNode(colorNodeName)
+            if not colorNode.IsA("vtkMRMLColorTableNode"):
+                raise slicer.util.MRMLNodeNotFoundException()
         except Exception:
-            df = rows  # fallback
-
-        colorNodeName = "MuscleMapWholeBodyLabels"
-        existing = slicer.util.getNode(colorNodeName) if slicer.mrmlScene.GetFirstNodeByName(colorNodeName) else None
-
-        if existing and existing.IsA("vtkMRMLColorTableNode"):
-            colorNode = existing
-        else:
-            colorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLColorTableNode", colorNodeName)
+            colorNode = slicer.mrmlScene.AddNewNodeByClass(
+                "vtkMRMLColorTableNode", colorNodeName
+            )
             colorNode.SetTypeToUser()
 
         colorNode.SetNumberOfColors(max_value + 1)
 
-        for idx in range(max_value + 1):
-            colorNode.SetColor(idx, "", 0.0, 0.0, 0.0, 0.0)
-
+        # Background
         colorNode.SetColor(0, "background", 0.0, 0.0, 0.0, 0.0)
 
-        for row in rows:
-            colorNode.SetColor(int(row["value"]), row["name"], row["r"], row["g"], row["b"], 1.0)
+        # -------------------------------------------------
+        # Color strategy (strong left/right contrast):
+        # - One base HUE per anatomy (ignoring side)
+        # - Left  = darker + more saturated
+        # - Right = much lighter + less saturated
+        # -------------------------------------------------
 
-        self._label_df = df
-        self._label_color_node = colorNode
-        return df, colorNode
+        base_colors = {}  # anatomy -> hue (float 0..1)
+
+        # Strong contrast settings
+        base_saturation_left = 0.85
+        base_value_left = 0.65
+
+        saturation_right = 0.45
+        value_right = 0.95
+
+        for item in labels_sorted:
+            anatomy = (item.get("anatomy") or "").strip()
+            side_raw = (item.get("side") or "").strip()
+            side = side_raw.lower()
+            label_value = int(item["value"])
+
+            # Assign one hue per anatomy (stable across runs)
+            if anatomy not in base_colors:
+                h = (len(base_colors) * 0.61803398875) % 1.0
+                base_colors[anatomy] = h
+
+            h = base_colors[anatomy]
+
+            # Decide left/right color variant
+            if side == "right":
+                s = saturation_right
+                v = value_right
+            else:
+                # left + midline + "no side" -> use left style
+                s = base_saturation_left
+                v = base_value_left
+
+            r, g, b = colorsys.hsv_to_rgb(h, s, v)
+
+            if side_raw and side != "no side":
+                name = f"{anatomy} ({side_raw})"
+            else:
+                name = anatomy
+
+            colorNode.SetColor(label_value, name, float(r), float(g), float(b), 1.0)
+
+        return colorNode
+
+
 
     def ensureDependencies(self):
         if sys.version_info < MIN_PYTHON_VERSION:
@@ -449,7 +406,6 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
             raise RuntimeError(msg)
 
         def have_module(name: str) -> bool:
-            import importlib.util
             return importlib.util.find_spec(name) is not None
 
         have_monai       = have_module("monai")
@@ -466,9 +422,7 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         have_dateutil    = have_module("dateutil")
 
         if not have_torch:
-            logging.error(
-                "[MuscleMap] PyTorch (torch) is not accessible in Slicer."
-            )
+            logging.error("[MuscleMap] PyTorch (torch) is not accessible in Slicer.")
             raise RuntimeError(
                 "PyTorch (torch) is not installed in this 3D Slicer Python environment.\n\n"
                 "To install PyTorch correctly, please follow these steps:\n\n"
@@ -484,8 +438,7 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
                 "After completing these steps, return to MuscleMap and try again."
             )
 
-        import torch
-        import shutil
+        import torch  # noqa: F401
         have_mm_segment = shutil.which("mm_segment") is not None
 
         if all([
@@ -521,21 +474,13 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
 
         if not have_mm_segment:
             logging.info("[MuscleMap] Installing MuscleMap (no deps)...")
-            slicer.util.pip_install(
-                ["--no-deps", "git+https://github.com/MuscleMap/MuscleMap.git"]
-            )
+            slicer.util.pip_install(["--no-deps", "git+https://github.com/MuscleMap/MuscleMap.git"])
         else:
             logging.info("[MuscleMap] mm_segment already found, skipping MuscleMap install.")
 
         logging.info("[MuscleMap] Dependency check/installation finished.")
 
     def runSegmentation(self, inputVolumeNode, force_cpu: bool = False, force_lower_overlap: bool = False):
-        """
-        1) Export the selected Slicer volume to a temporary NIfTI file.
-        2) Run 'mm_segment -i <input>' (provided by the MuscleMap toolbox).
-        3) Detect the new NIfTI output file from mm_segment and load it as labelmap.
-
-        """
         if not inputVolumeNode:
             raise ValueError("No input volume node provided.")
 
@@ -548,18 +493,11 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         if not slicer.util.saveNode(inputVolumeNode, inputPath):
             raise RuntimeError(f"Failed to save input volume to {inputPath}")
 
-        before_files = {
-            f for f in os.listdir(tempDir)
-            if f.lower().endswith((".nii", ".nii.gz"))
-        }
+        before_files = {f for f in os.listdir(tempDir) if f.lower().endswith((".nii", ".nii.gz"))}
 
         s_value = "75" if force_lower_overlap else "90"
         cmd = ["mm_segment", "-i", inputPath, "-s", s_value]
-
-        if force_cpu:
-            cmd.extend(["-g", "N"])
-        else:
-            cmd.extend(["-g", "Y"])
+        cmd.extend(["-g", "N" if force_cpu else "Y"])
 
         logging.info("[MuscleMap] Running command: " + " ".join(cmd))
 
@@ -572,7 +510,7 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,     
+            text=True,
             shell=False,
             cwd=tempDir,
             env=env,
@@ -581,27 +519,15 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         logging.info("[MuscleMap] mm_segment stderr:\n" + result.stderr)
 
         if result.returncode != 0:
-            raise RuntimeError(
-                "mm_segment failed with non-zero exit code.\n\n"
-            )
+            raise RuntimeError("mm_segment failed with non-zero exit code.\n\n" + result.stderr)
 
-        after_files = {
-            f for f in os.listdir(tempDir)
-            if f.lower().endswith((".nii", ".nii.gz"))
-        }
-
+        after_files = {f for f in os.listdir(tempDir) if f.lower().endswith((".nii", ".nii.gz"))}
         new_files = sorted(list(after_files - before_files))
 
         if not new_files:
-            raise RuntimeError(
-                "No new NIfTI output found in "
-                f"{tempDir} after running mm_segment.\n\n"
-            )
+            raise RuntimeError(f"No new NIfTI output found in {tempDir} after running mm_segment.\n\n")
 
-        preferred = [
-            f for f in new_files
-            if any(key in f.lower() for key in ("dseg", "seg", "label"))
-        ]
+        preferred = [f for f in new_files if any(key in f.lower() for key in ("dseg", "seg", "label"))]
         outputFileName = preferred[0] if preferred else new_files[0]
         outputPath = os.path.join(tempDir, outputFileName)
 
@@ -610,34 +536,38 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         labelNode = slicer.util.loadLabelVolume(outputPath)
         if not labelNode:
             raise RuntimeError("Failed to load the MuscleMap output labelmap.")
-    
-        # --- NEW: apply MuscleMap label names + colors from JSON (fixes VTK out-of-range colors) ---
+
+        # --- APPLY a real Slicer ColorTable (names+colors) ---
         try:
-            df, colorNode = self._build_label_dataframe_and_color_node()
+            colorNode = self._build_colortable_from_labels_json()
 
-            displayNode = labelNode.GetDisplayNode()
-            if displayNode:
-                displayNode.SetAndObserveColorNodeID(colorNode.GetID())
-                displayNode.SetInterpolate(False)
+            labelDisplayNode = labelNode.GetDisplayNode()
+            if labelDisplayNode:
+                labelDisplayNode.SetAndObserveColorNodeID(colorNode.GetID())
+                labelDisplayNode.SetInterpolate(False)
 
-            logging.info(f"[MuscleMap] Loaded {len(df) if hasattr(df, '__len__') else 'N/A'} label definitions from JSON.")
+            logging.info("[MuscleMap] Applied ColorTable to labelmap display.")
         except Exception as e:
-            logging.warning(f"[MuscleMap] Could not apply JSON-based label colors/names: {e}")
+            logging.warning(f"[MuscleMap] Could not apply JSON-based ColorTable: {e}")
+            colorNode = None
 
-        segmentationNode = slicer.mrmlScene.AddNewNodeByClass(
-            "vtkMRMLSegmentationNode", "MuscleMapSegmentation"
-        )
-        slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(
-            labelNode, segmentationNode
-        )
+        segmentationNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode", "MuscleMapSegmentation")
+        slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(labelNode, segmentationNode)
 
         segmentationNode.CreateDefaultDisplayNodes()
         segmentationNode.GetDisplayNode().SetVisibility(True)
 
-        slicer.mrmlScene.RemoveNode(labelNode)
+        # Optional: apply same ColorTable to segmentation display (helps consistency)
+        if colorNode is not None:
+            try:
+                segDisplay = segmentationNode.GetDisplayNode()
+                if segDisplay:
+                    segDisplay.SetAndObserveColorNodeID(colorNode.GetID())
+            except Exception:
+                pass
 
+        slicer.mrmlScene.RemoveNode(labelNode)
         slicer.util.setSliceViewerLayers(background=inputVolumeNode)
 
         slicer.util.infoDisplay("MuscleMap whole-body segmentation completed.")
-
         return segmentationNode
