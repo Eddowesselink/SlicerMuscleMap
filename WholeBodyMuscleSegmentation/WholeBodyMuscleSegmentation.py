@@ -397,18 +397,14 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         def have_module(name: str) -> bool:
             return importlib.util.find_spec(name) is not None
 
-        have_monai       = have_module("monai")
-        have_nibabel     = have_module("nibabel")
-        have_portalocker = have_module("portalocker")
-        have_pandas      = have_module("pandas")
-        have_torch       = have_module("torch")
-        have_sklearn     = have_module("sklearn")
-        have_tqdm        = have_module("tqdm")
-        have_joblib      = have_module("joblib")
-        have_threadpool  = have_module("threadpoolctl")
-        have_scipy       = have_module("scipy")
-        have_pytz        = have_module("pytz")
-        have_dateutil    = have_module("dateutil")
+        have_monai   = have_module("monai")
+        have_nibabel = have_module("nibabel")
+        have_pandas  = have_module("pandas")
+        have_torch   = have_module("torch")
+        have_sklearn = have_module("sklearn")
+        have_scipy   = have_module("scipy")
+        have_tqdm    = have_module("tqdm")
+        have_psutil  = have_module("psutil")
 
         if not have_torch:
             logging.error("[MuscleMap] PyTorch (torch) is not accessible in Slicer.")
@@ -431,38 +427,66 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
         have_mm_segment = shutil.which("mm_segment") is not None
 
         if all([
-            have_monai, have_nibabel, have_torch, have_joblib, have_dateutil,
-            have_pytz, have_threadpool, have_scipy, have_tqdm,
-            have_portalocker, have_sklearn, have_pandas, have_mm_segment
+            have_monai, have_nibabel, have_torch, have_sklearn, have_scipy,
+            have_tqdm, have_psutil, have_pandas, have_mm_segment
         ]):
             logging.info("[MuscleMap] All dependencies already present, nothing to install.")
             return
 
         logging.info("[MuscleMap] Missing dependencies detected, installing...")
 
-        minimal_packages = [
-            ("monai",         "monai==1.5.1"),
-            ("nibabel",       "nibabel==5.2.1"),
-            ("tqdm",          "tqdm==4.67.1"),
-            ("portalocker",   "portalocker==3.1.1"),
-            ("pandas",        "pandas"),
-            ("sklearn",       "scikit-learn"),
-            ("joblib",        "joblib"),
-            ("threadpoolctl", "threadpoolctl"),
-            ("scipy",         "scipy"),
-            ("pytz",          "pytz"),
-            ("dateutil",      "python-dateutil"),
+        # torch (provided by the SlicerPyTorch extension) and numpy (bundled by
+        # Slicer and ABI-critical for its C++ side) must never be installed or
+        # upgraded by pip, or the Slicer Python environment breaks. We pin them to
+        # their currently installed versions via a pip constraints file, so that
+        # even a transitive dependency cannot silently change them - pip fails
+        # loudly instead of quietly breaking Slicer.
+        import numpy
+        constraints = [
+            f"numpy=={numpy.__version__}",
+            f"torch=={torch.__version__}",
+        ]
+        constraintsPath = os.path.join(tempfile.gettempdir(), "musclemap_pip_constraints.txt")
+        with open(constraintsPath, "w") as f:
+            f.write("\n".join(constraints) + "\n")
+        logging.info(f"[MuscleMap] Using pip constraints {constraints} ({constraintsPath})")
+
+        # Runtime dependencies of `mm_segment` - the only MuscleMap tool the Slicer
+        # extension runs. Derived from the imports of scripts/mm_segment.py and
+        # scripts/mm_util.py. The GUI/metrics-only packages from the MuscleMap
+        # requirements.txt (scikit-image, matplotlib, customtkinter, Pillow,
+        # transforms3d) are intentionally NOT installed: the segmentation path
+        # never imports them.
+        #
+        # Intentionally UNPINNED. A modern Slicer already ships a recent scientific
+        # stack (numpy, scipy, scikit-learn, pandas, ...); forcing MuscleMap's old
+        # requirements.txt pins (e.g. scikit-learn==1.3.2) would downgrade those
+        # and break Slicer - scikit-learn 1.3.2 cannot import against numpy 2.x.
+        # Installing unpinned, WITHOUT --no-deps, keeps whatever Slicer already
+        # has, installs only what is missing (e.g. monai, psutil), and pulls each
+        # package's missing transitive deps - most notably `narwhals`, which modern
+        # scikit-learn imports at startup.
+        segmentation_packages = [
+            "monai",
+            "nibabel",
+            "scikit-learn",
+            "scipy",
+            "pandas",
+            "tqdm",
+            "psutil",
         ]
 
-        for module_name, pkg in minimal_packages:
-            if not have_module(module_name):
-                logging.info(f"[MuscleMap] Installing (no-deps): {pkg}")
-                slicer.util.pip_install(["--no-deps", pkg])
-            else:
-                logging.info(f"[MuscleMap] {pkg} already installed, skipping.")
+        for pkg in segmentation_packages:
+            logging.info(f"[MuscleMap] Installing (constrained, with deps): {pkg}")
+            slicer.util.pip_install(["-c", constraintsPath, pkg])
 
+        # The MuscleMap package itself is installed WITHOUT its declared
+        # dependencies: its requirements.txt pins torch==2.4.1 and numpy==1.24.4,
+        # which would clobber the Slicer-managed builds. We only need its
+        # `mm_segment` entry point here; everything mm_segment imports is provided
+        # by segmentation_packages above.
         if not have_mm_segment:
-            logging.info("[MuscleMap] Installing MuscleMap (no deps)...")
+            logging.info("[MuscleMap] Installing MuscleMap package (no deps)...")
             slicer.util.pip_install(["--no-deps", "git+https://github.com/MuscleMap/MuscleMap.git"])
         else:
             logging.info("[MuscleMap] mm_segment already found, skipping MuscleMap install.")
