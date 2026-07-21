@@ -453,20 +453,27 @@ class WholeBodyMuscleSegmentationLogic(ScriptedLoadableModuleLogic):
 
         # Runtime dependencies of `mm_segment` - the only MuscleMap tool the Slicer
         # extension runs. Derived from the imports of scripts/mm_segment.py and
-        # scripts/mm_util.py. Installed WITH their dependencies (no --no-deps), so
-        # transitive requirements such as joblib, threadpoolctl, python-dateutil,
-        # pytz, scipy and narwhals are resolved automatically. The GUI/metrics-only
-        # packages from the MuscleMap requirements.txt (scikit-image, matplotlib,
-        # customtkinter, Pillow, transforms3d) are intentionally NOT installed:
-        # the segmentation path never imports them.
+        # scripts/mm_util.py. The GUI/metrics-only packages from the MuscleMap
+        # requirements.txt (scikit-image, matplotlib, customtkinter, Pillow,
+        # transforms3d) are intentionally NOT installed: the segmentation path
+        # never imports them.
+        #
+        # Intentionally UNPINNED. A modern Slicer already ships a recent scientific
+        # stack (numpy, scipy, scikit-learn, pandas, ...); forcing MuscleMap's old
+        # requirements.txt pins (e.g. scikit-learn==1.3.2) would downgrade those
+        # and break Slicer - scikit-learn 1.3.2 cannot import against numpy 2.x.
+        # Installing unpinned, WITHOUT --no-deps, keeps whatever Slicer already
+        # has, installs only what is missing (e.g. monai, psutil), and pulls each
+        # package's missing transitive deps - most notably `narwhals`, which modern
+        # scikit-learn imports at startup.
         segmentation_packages = [
-            "monai==1.3.2",
-            "nibabel==5.2.1",
-            "scikit-learn==1.3.2",
-            "pandas==2.0.3",
-            "tqdm==4.67.1",
-            "psutil==6.1.1",
-            # scipy is pulled in transitively via scikit-learn.
+            "monai",
+            "nibabel",
+            "scikit-learn",
+            "scipy",
+            "pandas",
+            "tqdm",
+            "psutil",
         ]
 
         for pkg in segmentation_packages:
